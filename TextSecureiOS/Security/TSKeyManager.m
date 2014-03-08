@@ -25,11 +25,11 @@
 
 #pragma mark Username (Phone number)
 
-+ (BOOL) storeUsernameToken:(NSString*)token {
-  return [KeychainWrapper createKeychainValue:token forIdentifier:usernameTokenStorageId];
++ (BOOL) storeUsername:(NSString *)phoneNumber {
+  return [KeychainWrapper createKeychainValue:phoneNumber forIdentifier:usernameTokenStorageId];
 }
 
-+ (NSString*) getUsernameToken {
++ (NSString*) getUsername {
   return [KeychainWrapper keychainStringFromMatchingIdentifier:usernameTokenStorageId];
 }
 
@@ -58,8 +58,8 @@
 }
 
 + (NSString*) getAuthorizationTokenFromAuthToken:(NSString*)authToken{
-  NSLog(@"Username : %@ and AuthToken: %@", [TSKeyManager getUsernameToken], [TSKeyManager getAuthenticationToken] );
-  return [NSString stringWithFormat:@"%@:%@",[TSKeyManager getUsernameToken],[TSKeyManager getAuthenticationToken]];
+  NSLog(@"Username : %@ and AuthToken: %@", [TSKeyManager getUsername], [TSKeyManager getAuthenticationToken] );
+  return [NSString stringWithFormat:@"%@:%@",[TSKeyManager getUsername],[TSKeyManager getAuthenticationToken]];
 }
 
 
@@ -96,7 +96,7 @@
 }
 
 +(BOOL) hasVerifiedPhoneNumber{
-  return ([TSKeyManager getUsernameToken] && [TSKeyManager getAuthenticationToken] && [TSStorageMasterKey wasStorageMasterKeyCreated]);
+  return ([TSKeyManager getUsername] && [TSKeyManager getAuthenticationToken] && [TSStorageMasterKey wasStorageMasterKeyCreated]);
 }
 
 

@@ -12,8 +12,8 @@
 
 
 #pragma mark username
-+ (BOOL) storeUsernameToken:(NSString*)token;
-+ (NSString*) getUsernameToken;
++ (BOOL) storeUsername:(NSString*)phoneNumber;
++ (NSString*) getUsername;
 
 
 #pragma mark authentication

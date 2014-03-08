@@ -16,38 +16,35 @@
 
 
 #pragma mark Private methods
-+ (NSString*) concatenatedPhoneNumbersForContacts:(NSArray*)tsContacts {
-    
-    // Extract the contacts' phone numbers
-    NSMutableArray *phoneNumbers = [NSMutableArray array];
-    for (TSContact *contact in tsContacts) {
-        [phoneNumbers addObject:contact.registeredID];
-    }
-    
+
++ (NSString*) generateThreadIdForParticipants:(NSArray*)contactsUsernames {
     // Sort the phone numbers so we always get the same hash for the same list of contacts
-    NSArray *sortedArray = [phoneNumbers sortedArrayUsingDescriptors:
+    NSArray *sortedArray = [contactsUsernames sortedArrayUsingDescriptors:
                             @[[NSSortDescriptor sortDescriptorWithKey:@"doubleValue"
                                                             ascending:YES]]];
     // Convert the result to a string
-    return [sortedArray componentsJoinedByString:@""];
+    NSString *phoneNumbers = [sortedArray componentsJoinedByString:@""];
+    
+    // Hash the string
+    return [Cryptography computeSHA1DigestForString:phoneNumbers];
 }
+
 
 
 # pragma mark Thread creation method
-+ (TSThread*) threadWithContacts:(NSArray*)participants {
+
++ (instancetype) threadWithContact:(NSString *)contactUsername {
     TSThread *thread = [[TSThread alloc] init];
+    if (thread == nil) {
+        return nil;
+    }
     
-    // Current user is always part of threads they have on their device
-    NSMutableArray *allParticipants = [NSMutableArray arrayWithArray:participants];
-    [allParticipants addObject:[[TSContact alloc] initWithRegisteredID:[TSKeyManager getUsernameToken]]];
-    thread.participants = [NSArray arrayWithArray:allParticipants];
+    thread->_participants = @[contactUsername];
+    thread->_threadID = [TSThread generateThreadIdForParticipants:@[contactUsername]];
     
-    // Generate the corresponding thread ID
-    NSString *phoneNumbers = [TSThread concatenatedPhoneNumbersForContacts:participants];
-    thread.threadID = [Cryptography computeSHA1DigestForString:phoneNumbers];
+    // TODO: Fetch latest message from DB
     
     return thread;
 }
-
 
 @end

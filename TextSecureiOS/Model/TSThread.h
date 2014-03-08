@@ -14,13 +14,15 @@
 
 @interface TSThread : NSObject
 
-@property (nonatomic, copy) NSString *threadID;         // A hash of all the participants' phone numbers
-@property (nonatomic,strong) NSArray *participants;     // An array of TSContact objects
+@property (nonatomic, strong, readonly) NSString *threadID;         // A hash of all the participants' phone numbers / usernames
+@property (nonatomic, strong, readonly) NSArray *participants;      // An array of usernames; does not include the current user
 @property (nonatomic, retain) TSMessage *latestMessage;
 //@property (nonatomic, retain) TSAxolotlThreadState *axolotlVariables;
 
 
-+ (TSThread*) threadWithContacts:(NSArray*)participants;
++ (instancetype) threadWithContact:(NSString *)contactUsername;
+//+ (instancetype) threadWithGroup:(NSArray *)contactsUsernames; // For group threads later;
+
 
 
 @end

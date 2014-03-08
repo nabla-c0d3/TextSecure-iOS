@@ -264,7 +264,7 @@ static NSString *masterPw = @"1234test";
   XCTAssertNotNil(bobIdentityKey, @"bob identity key nil");
   uint32_t prekeyId = [bobEphemeralKey getPreKeyId];
   // Alice goes first
-  [TSKeyManager storeUsernameToken:self.aliceUserName];
+  [TSKeyManager storeUsername:self.aliceUserName];
   [self.alice ratchetSetupFirstSender:[bobIdentityKey getPublicKey] theirEphemeralKey:[bobEphemeralKey getPublicKey]];
  
   TSECKeyPair* aliceSendingKey = [TSMessagesDatabase getEphemeralOfSendingChain:self.thread1];
@@ -273,7 +273,7 @@ static NSString *masterPw = @"1234test";
   
 
   // Clobbers any keys of alices
-  [TSKeyManager storeUsernameToken:self.bobUserName];
+  [TSKeyManager storeUsername:self.bobUserName];
   [self.bob ratchetSetupFirstReceiver:[aliceIdentityKey getPublicKey] theirEphemeralKey:[aliceInitialEphemeralKey getPublicKey] withMyPrekeyId:[NSNumber numberWithInt:prekeyId]];
   
   [self.bob updateChainsOnReceivedMessage:[aliceSendingKey getPublicKey]];

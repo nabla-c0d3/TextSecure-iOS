@@ -92,7 +92,7 @@ static TSEncryptedDatabase *messagesDb = nil;
             return;
         }
         
-        if (![db executeUpdate:@"CREATE TABLE IF NOT EXISTS contacts (registered_phone_number TEXT,relay TEXT, useraddressbookid INTEGER, identitykey TEXT, identityverified INTEGER, supports_sms INTEGER, next_key TEXT)"]){
+        if (![db executeUpdate:@"CREATE TABLE IF NOT EXISTS contacts (username TEXT, relay TEXT, addressBookId INTEGER, identityKey TEXT, isIdentityKeyVerified INTEGER, supportsSMS INTEGER, nextKey TEXT)"]){
             return;
         }
         
@@ -247,22 +247,19 @@ static TSEncryptedDatabase *messagesDb = nil;
             NSString* timestamp = [searchInDB stringForColumn:@"timestamp"];
             NSDate *date = [dateFormatter dateFromString:timestamp];
             
-            TSContact *contact;
-            // TODO: temporary hack until TSThread and TSMessage are properly refactored
-            NSString *senderID = [searchInDB stringForColumn:@"sender_id"];
-            NSString *receiverID = [searchInDB stringForColumn:@"recipient_id"];
+            // TODO: fetch threads from the threads DB table directly as the current implementation will fail for group message
+            NSString *senderUsername = [searchInDB stringForColumn:@"sender_id"];
+            NSString *receiverUsername = [searchInDB stringForColumn:@"recipient_id"];
+            NSString *contactUsername;
             
-            NSString *userID = [TSKeyManager getUsernameToken];
-            if ([userID isEqualToString:[searchInDB stringForColumn:@"recipient_id"]]) {
-                contact = [[TSContact alloc] initWithRegisteredID:senderID];
+            
+            if ([[TSKeyManager getUsername] isEqualToString:receiverUsername]) {
+                contactUsername = senderUsername;
             }
             else {
-                contact = [[TSContact alloc] initWithRegisteredID:receiverID];
+                contactUsername = receiverUsername;
             }
-            
-            TSContact *sender = [[TSContact alloc] initWithRegisteredID:[searchInDB stringForColumn:@"sender_id"]];
-            TSContact *receiver = [[TSContact alloc] initWithRegisteredID:[searchInDB stringForColumn:@"recipient_id"]];
-            TSThread *messageThread = [TSThread threadWithContacts:@[contact]];
+            TSThread *messageThread = [TSThread threadWithContact:contactUsername];
             
             TSAttachment *attachment = nil;
             TSAttachmentType attachmentType = [searchInDB intForColumn:@"attachment_type"];
@@ -272,7 +269,10 @@ static TSEncryptedDatabase *messagesDb = nil;
                 attachment = [[TSAttachment alloc] initWithAttachmentDataPath:attachmentDataPath withType:attachmentType withDecryptionKey:attachmentDecryptionKey];
             }
             
-            messageThread.latestMessage = [TSMessage messageWithContent:[searchInDB stringForColumn:@"message"] sender:sender.registeredID recipient:receiver.registeredID date:date attachment:nil];
+            messageThread.latestMessage = [TSMessage messageWithContent:[searchInDB stringForColumn:@"message"]
+                                                                 sender:senderUsername
+                                                              recipient:receiverUsername
+                                                                   date:date];
             
             [threadArray addObject:messageThread];
         }
@@ -295,34 +295,44 @@ static TSEncryptedDatabase *messagesDb = nil;
     [messagesDb.dbQueue inDatabase:^(FMDatabase *db) {
         for(TSContact* contact in thread.participants) {
             //TODO: Get rid of the save method
-            [contact save];
+           // [contact save];
         }
     }];
 }
 
-+(void)findTSContactForPhoneNumber:(NSString*)phoneNumber{
++ (TSContact *)getContactWithUsername:(NSString *)username{
     
     // Decrypt the DB if it hasn't been done yet
     if (!messagesDb) {
         if (![TSMessagesDatabase databaseOpenWithError:nil])
             // TODO: better error handling
-            return;
+            return nil;
     }
+    
+    __block TSContact *contact = nil;
     
     [messagesDb.dbQueue inDatabase:^(FMDatabase *db) {
         
-        FMResultSet *searchInDB = [db executeQuery:@"SELECT registeredID FROM contacts WHERE registered_phone_number = :phoneNumber " withParameterDictionary:@{@"phoneNumber":phoneNumber}];
+        FMResultSet *searchInDB = [db executeQuery:@"SELECT username FROM contacts WHERE username = :username " withParameterDictionary:@{@"username":username}];
         
         if ([searchInDB next]) {
-            // That was found :)
-            NSLog(@"Entry %@", [searchInDB stringForColumn:@"useraddressbookid"]);
+            contact = [TSContact contactWithUsername:[searchInDB stringForColumn:@"username"]
+                                       addressBookId:[searchInDB intForColumn:@"addressBookId"]
+                                               relay:[searchInDB stringForColumn:@"relay"]
+                                         supportsSMS:[searchInDB boolForColumn:@"supportsSMS"]
+                                             nextKey:[searchInDB stringForColumn:@"nextKey"]
+                                         identityKey:[searchInDB stringForColumn:@"identityKey"]
+                               isIdentityKeyVerified:[searchInDB boolForColumn:@"isIdentityKeyVerified"]];
         }
         
         [searchInDB close];
     }];
+    
+    return contact;
 }
 
-+(void)storeTSContact:(TSContact*)contact{
+
++(void)storeContact:(TSContact *)contact {
     
     // Decrypt the DB if it hasn't been done yet
     if (!messagesDb) {
@@ -333,17 +343,18 @@ static TSEncryptedDatabase *messagesDb = nil;
     
     [messagesDb.dbQueue inDatabase:^(FMDatabase *db) {
         
-        FMResultSet *searchInDB = [db executeQuery:@"SELECT registeredID FROM contacts WHERE registered_phone_number = :phoneNumber " withParameterDictionary:@{@"phoneNumber":contact.registeredID}];
-        NSDictionary *parameterDictionary = @{@"registeredID": contact.registeredID, @"relay": contact.relay, @"userABID": contact.userABID, @"identityKey": contact.identityKey, @"identityKeyIsVerified":[NSNumber numberWithInt:((contact.identityKeyIsVerified)?1:0)], @"supportsSMS":[NSNumber numberWithInt:((contact.supportsSMS)?1:0)], @"nextKey":contact.nextKey};
+        FMResultSet *searchInDB = [db executeQuery:@"SELECT username FROM contacts WHERE username = :phoneNumber " withParameterDictionary:@{@"phoneNumber":contact.username}];
+        
+        NSDictionary *parameterDictionary = @{@"username": contact.username, @"relay": contact.relay, @"addressBookId": [NSNumber numberWithInt: contact.addressBookId], @"identityKey": contact.identityKey, @"identityKeyIsVerified":contact.isIdentityKeyVerified, @"supportsSMS":contact.supportsSMS, @"nextKey":contact.nextKey};
         
         
         if ([searchInDB next]) {
             // the phone number was found, let's now update the contact
-            [db executeUpdate:@"UPDATE contacts SET relay = :relay, useraddressbookid :userABID, identitykey = :identityKey, identityverified = :identityKeyIsVerified, supports_sms = :supportsSMS, next_key = :nextKey WHERE registered_phone_number = :registeredID" withParameterDictionary:parameterDictionary];
+            [db executeUpdate:@"UPDATE contacts SET relay = :relay, addressBookId :addressBookId, identityKey = :identityKey, isIdentityKeyVerified = :isIdentityKeyVerified, supportsSMS = :supportsSMS, nextKey = :nextKey WHERE username = :username" withParameterDictionary:parameterDictionary];
         }
         else{
             // the contact doesn't exist, let's create him
-            [db executeUpdate:@"REPLACE INTO contacts (:registeredID,:relay , :userABID, :identityKey, :identityKeyIsVerified, :supportsSMS, :nextKey)" withParameterDictionary:parameterDictionary];
+            [db executeUpdate:@"REPLACE INTO contacts (:username,:relay , :addressBookId, :identityKey, :identityKeyIsVerified, :supportsSMS, :nextKey)" withParameterDictionary:parameterDictionary];
         }
         [searchInDB close];
     }];

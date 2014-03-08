@@ -94,7 +94,7 @@
         
         DLog(@"Requested confirmation code : %@ for code :%i", responseObject, operation.response.statusCode);
         
-        [TSKeyManager storeUsernameToken:self.selectedPhoneNumber];
+        [TSKeyManager storeUsername:self.selectedPhoneNumber];
         
         [TSKeyManager generateNewAccountAuthenticationToken];
         [TSKeyManager generateNewSignalingKeyToken];

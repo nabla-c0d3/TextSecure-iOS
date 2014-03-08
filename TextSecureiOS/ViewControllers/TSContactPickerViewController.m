@@ -66,13 +66,13 @@
     
     TSContact *contact = ((TSContact *)[self.whisperContacts objectAtIndex:indexPath.row]);
         
-    cell.textLabel.text = contact.name;
-    cell.detailTextLabel.text = [contact labelForRegisteredNumber];
+    cell.textLabel.text = [contact getFullNameFromAddressBook];
+    cell.detailTextLabel.text = [contact getUsernameLabelFromAddressBook];
     return cell;
 }
 
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
-    [((UINavigationController*)self.navigationController.presentingViewController) pushViewController:[[ComposeMessageViewController alloc] initWithConversation:[TSThread threadWithContacts:[NSArray arrayWithObject:[self.whisperContacts objectAtIndex:indexPath.row]]]] animated:NO];
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [((UINavigationController*)self.navigationController.presentingViewController) pushViewController:[[ComposeMessageViewController alloc] initWithConversation:[TSThread threadWithContact:[[self.whisperContacts objectAtIndex:indexPath.row] username]]] animated:NO];
     [self dismissViewControllerAnimated:YES
                              completion:nil];
 }

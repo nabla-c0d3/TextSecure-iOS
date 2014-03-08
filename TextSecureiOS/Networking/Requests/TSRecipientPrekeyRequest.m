@@ -10,19 +10,25 @@
 #import "TSContact.h"
 @implementation TSRecipientPrekeyRequest
 
--(TSRequest*) initWithRecipient:(TSContact*) contact {
+-(TSRequest*) initWithRecipient:(NSString *) contactUsername {
   NSString* recipientInformation;
+    
+    // TODO: What follows is never called because the contact is currently always "fake"; see the code calling this method
+    // Commenting it out so I can keep on refactoring
+#if 0
   if([contact.relay length]){
-    recipientInformation = [NSString stringWithFormat:@"%@?%@",contact.registeredID,contact.relay];
+    recipientInformation = [NSString stringWithFormat:@"%@?%@",contact.username,contact.relay];
+      // TODO for refactoring: fech the contact (and so the relay) from the DB using the contactUsername
   }
   else {
-    recipientInformation=contact.registeredID;
+    recipientInformation=contact.username;
   }
-  self = [super initWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@/%@", textSecureKeysAPI, recipientInformation]]];
+#endif
     
-  [self setHTTPMethod:@"GET"];
+    self = [super initWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@/%@", textSecureKeysAPI, contactUsername]]];
+    [self setHTTPMethod:@"GET"];
   
-  return self;
+    return self;
 }
 
 @end

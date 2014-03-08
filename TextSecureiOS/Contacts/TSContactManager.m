@@ -13,6 +13,7 @@
 #import "NSString+Conversion.h"
 #import "Cryptography.h"
 #import "TSNetworkManager.h"
+#import "TSMessagesDatabase.h"
 #import "TSContactsIntersectionRequest.h"
 
 @implementation TSContactManager
@@ -95,11 +96,16 @@
             NSArray *contactsHashes = [responseObject objectForKey:@"contacts"];
             
             NSMutableArray *contacts = [NSMutableArray array];
+            
             for (NSDictionary *contactHash in contactsHashes) {
-                TSContact *contact = [[TSContact alloc]init];
-                contact.userABID = [hashedAB objectForKey:[contactHash objectForKey:@"token"]];
-                contact.registeredID = [originalAB objectForKey:[contactHash objectForKey:@"token"]];
+                TSContact *contact = [TSContact contactWithUsername:[originalAB objectForKey:[contactHash objectForKey:@"token"]]
+                                                      addressBookId:[[hashedAB objectForKey:[contactHash objectForKey:@"token"]] intValue]];
                 [contacts addObject:contact];
+            }
+            
+            // Store contacts in DB
+            for (TSContact *contact in contacts) {
+                [TSMessagesDatabase storeContact:contact];
             }
             
             contactFetchCompletionBlock(contacts);

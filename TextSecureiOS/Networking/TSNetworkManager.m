@@ -52,31 +52,51 @@
       // The only unauthenticated request is the initial request for a verification code
 
         operationManager.requestSerializer = [AFJSONRequestSerializer serializer];
-        [operationManager GET:[textSecureServer stringByAppendingString:request.URL.absoluteString] parameters:request.parameters success:successCompletionBlock failure:failureCompletionBlock];
+        [operationManager GET:[textSecureServer stringByAppendingString:request.URL.absoluteString]
+                   parameters:request.parameters
+                      success:successCompletionBlock
+                      failure:failureCompletionBlock];
+       
     } else if ([request isKindOfClass:[TSServerCodeVerificationRequest class]]){
         // We plant the Authorization parameter ourselves, no need to double add.
         operationManager.requestSerializer = [AFJSONRequestSerializer serializer];
         
         // Take out the Basic Auth Params
         
-        [operationManager.requestSerializer setAuthorizationHeaderFieldWithUsername:[TSKeyManager getUsernameToken] password:[request.parameters objectForKey:@"AuthKey"]];
+        [operationManager.requestSerializer setAuthorizationHeaderFieldWithUsername:[TSKeyManager getUsername]
+                                                                           password:[request.parameters objectForKey:@"AuthKey"]];
         
         [request.parameters removeObjectForKey:@"AuthKey"];
         
-        [operationManager PUT:[textSecureServer stringByAppendingString:request.URL.absoluteString] parameters:request.parameters success:successCompletionBlock failure:failureCompletionBlock];
+        [operationManager PUT:[textSecureServer stringByAppendingString:request.URL.absoluteString]
+                   parameters:request.parameters
+                      success:successCompletionBlock
+                      failure:failureCompletionBlock];
     }
     else{
         // For all other equests, we do add an authorization header
         operationManager.requestSerializer = [AFJSONRequestSerializer serializer];
         
-        [operationManager.requestSerializer setAuthorizationHeaderFieldWithUsername:[TSKeyManager getUsernameToken] password:[TSKeyManager getAuthenticationToken]];
+        [operationManager.requestSerializer setAuthorizationHeaderFieldWithUsername:[TSKeyManager getUsername]
+                                                                           password:[TSKeyManager getAuthenticationToken]];
                 
         if ([request.HTTPMethod isEqualToString:@"GET"]) {
-            [operationManager GET:[textSecureServer stringByAppendingString:request.URL.absoluteString] parameters:request.parameters success:successCompletionBlock failure:failureCompletionBlock];
+            [operationManager GET:[textSecureServer stringByAppendingString:request.URL.absoluteString]
+                       parameters:request.parameters
+                          success:successCompletionBlock
+                          failure:failureCompletionBlock];
+            
         } else if ([request.HTTPMethod isEqualToString:@"POST"]){
-            [operationManager POST:[textSecureServer stringByAppendingString:request.URL.absoluteString] parameters:request.parameters success:successCompletionBlock failure:failureCompletionBlock];
+            [operationManager POST:[textSecureServer stringByAppendingString:request.URL.absoluteString]
+                        parameters:request.parameters
+                           success:successCompletionBlock
+                           failure:failureCompletionBlock];
+            
         } else if ([request.HTTPMethod isEqualToString:@"PUT"]){
-            [operationManager PUT:[textSecureServer stringByAppendingString:request.URL.absoluteString] parameters:request.parameters success:successCompletionBlock failure:failureCompletionBlock];
+            [operationManager PUT:[textSecureServer stringByAppendingString:request.URL.absoluteString]
+                       parameters:request.parameters
+                          success:successCompletionBlock
+                          failure:failureCompletionBlock];
         }
     }
 }

@@ -49,9 +49,8 @@
             
         case TSPreKeyWhisperMessageType:{
             // get a contact's prekey
-            TSContact* contact = [[TSContact alloc] initWithRegisteredID:message.recipientId];
-            TSThread* thread = [TSThread threadWithContacts:@[[[TSContact alloc] initWithRegisteredID:message.recipientId]]];
-            [[TSNetworkManager sharedManager] queueAuthenticatedRequest:[[TSRecipientPrekeyRequest alloc] initWithRecipient:contact] success:^(AFHTTPRequestOperation *operation, id responseObject) {
+            TSThread* thread = [TSThread threadWithContact:message.recipientId];
+            [[TSNetworkManager sharedManager] queueAuthenticatedRequest:[[TSRecipientPrekeyRequest alloc] initWithRecipient:message.recipientId] success:^(AFHTTPRequestOperation *operation, id responseObject) {
                 switch (operation.response.statusCode) {
                     case 200:{
                         
@@ -95,7 +94,7 @@
 +(void)receiveMessage:(NSData*)data {
     NSData* decryptedPayload = [Cryptography decryptAppleMessagePayload:data withSignalingKey:[TSKeyManager getSignalingKeyToken]];
     TSMessageSignal *messageSignal = [[TSMessageSignal alloc] initWithData:decryptedPayload];
-    TSAxolotlRatchet *ratchet = [[TSAxolotlRatchet alloc] initForThread:[TSThread threadWithContacts: @[[[TSContact alloc] initWithRegisteredID:messageSignal.source]]]];
+    TSAxolotlRatchet *ratchet = [[TSAxolotlRatchet alloc] initForThread:[TSThread threadWithContact:messageSignal.source]];
     
     TSMessage* message;
     
@@ -114,7 +113,7 @@
             
             message = [TSMessage messageWithContent:[[NSString alloc] initWithData:tsMessageDecryption encoding:NSASCIIStringEncoding]
                                              sender:messageSignal.source
-                                          recipient:[TSKeyManager getUsernameToken]
+                                          recipient:[TSKeyManager getUsername]
                                                date:messageSignal.timestamp];
             break;
         }
@@ -127,7 +126,7 @@
             
             message = [TSMessage messageWithContent:[[NSString alloc] initWithData:tsMessageDecryption encoding:NSASCIIStringEncoding]
                                              sender:messageSignal.source
-                                          recipient:[TSKeyManager getUsernameToken]
+                                          recipient:[TSKeyManager getUsername]
                                                date:messageSignal.timestamp];
             // TODO: Missing break; here ?
         }
@@ -144,7 +143,7 @@
             break;
     }
 
-    [TSMessagesDatabase storeMessage:message fromThread:[TSThread threadWithContacts: @[[[TSContact alloc]  initWithRegisteredID:message.senderId]]]];
+    [TSMessagesDatabase storeMessage:message fromThread:[TSThread threadWithContact: message.senderId]];
 }
 
 

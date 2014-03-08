@@ -7,40 +7,53 @@
 //
 
 #import "TSContactManager.h"
-#import <AddressBook/AddressBook.h>
-#import "TSMessagesDatabase.h"
 
 @implementation TSContact
 
--(id) initWithRegisteredID:(NSString*)registeredID {
-#warning added this to use the compute thread ids methods as is, but awkward as there are some db calls that assume TSContact has more fields (see header) that will crash with a TSContact initialized in this manner.
+
++ (instancetype) contactWithUsername:(NSString *)registeredUsername addressBookId:(ABRecordID)addressBookId relay:(NSString *)relay supportsSMS:(BOOL)supportsSMS nextKey:(NSString *)nextKey identityKey:(NSString *)identityKey isIdentityKeyVerified:(BOOL) isIdentityKeyVerified {
     
-    if(self=[super init]) {
-        self.registeredID = registeredID;
+    TSContact *contact = [[TSContact alloc] init];
+    if (contact == nil) {
+        return nil;
     }
-    return self;
     
+    contact->_username = registeredUsername;
+    contact->_addressBookId = addressBookId;
+    contact->_relay = relay;
+    contact->_nextKey = nextKey;
+    contact->_identityKey = identityKey;
+    contact->_isIdentityKeyVerified = isIdentityKeyVerified;
+    
+    return contact;
 }
-- (NSString*) name{
-    if (self.userABID){
+
++ (instancetype) contactWithUsername:(NSString *)registeredUsername addressBookId:(ABRecordID)addressBookId {
+    return [TSContact contactWithUsername:registeredUsername addressBookId:addressBookId relay:nil supportsSMS:NO nextKey:nil identityKey:nil isIdentityKeyVerified:NO];
+}
+
+
+- (NSString*) getFullNameFromAddressBook {
+    if (self.addressBookId){
         
         ABAddressBookRef addressBook = ABAddressBookCreateWithOptions(nil, nil);
         
-        ABRecordRef currentPerson = ABAddressBookGetPersonWithRecordID(addressBook, [[self userABID] intValue]);
+        ABRecordRef currentPerson = ABAddressBookGetPersonWithRecordID(addressBook, self.addressBookId);
         NSString *firstName = (__bridge NSString *)ABRecordCopyValue(currentPerson, kABPersonFirstNameProperty) ;
         NSString *surname = (__bridge NSString *)ABRecordCopyValue(currentPerson, kABPersonLastNameProperty) ;
         
         CFRelease(addressBook);
     
         return [NSString stringWithFormat:@"%@ %@", firstName?firstName:@"", surname?surname:@""];
-        
-    }else {return nil;}
+    }
+    return nil;
 }
 
-- (NSString*) labelForRegisteredNumber{
-    if (self.userABID && self.registeredID) {
+
+- (NSString*) getUsernameLabelFromAddressBook {
+    if (self.addressBookId && self.username) {
         ABAddressBookRef addressBook = ABAddressBookCreateWithOptions(nil, nil);
-        ABRecordRef currentPerson = ABAddressBookGetPersonWithRecordID(addressBook, [[self userABID] intValue]);
+        ABRecordRef currentPerson = ABAddressBookGetPersonWithRecordID(addressBook, self.addressBookId);
         
         ABMutableMultiValueRef phoneNumbers = ABRecordCopyValue(currentPerson, kABPersonPhoneProperty);
         
@@ -55,7 +68,7 @@
             
             NSString *number = (__bridge NSString*) phoneNumber;
 
-            if ([[TSContactManager cleanPhoneNumber:number] isEqualToString:self.registeredID]) {
+            if ([[TSContactManager cleanPhoneNumber:number] isEqualToString:self.username]) {
                 label = (__bridge NSString *)(ABAddressBookCopyLocalizedLabel (ABMultiValueCopyLabelAtIndex(phoneNumbers, i)));
                 break;
             }
@@ -73,7 +86,5 @@
     }
 }
 
--(void) save{
-    [TSMessagesDatabase storeTSContact:self];
-}
+
 @end
