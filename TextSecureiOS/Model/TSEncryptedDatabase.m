@@ -15,17 +15,18 @@
 
 @interface TSEncryptedDatabase(Private)
 
--(instancetype) initWithDatabaseQueue:(FMDatabaseQueue *)queue;
+-(instancetype) initWithDatabaseQueue:(FMDatabaseQueue *)queue; // Private constructor
+-(BOOL) openAndDecrypt:(NSError **)error;                       // Helper function to decrypt a DB
+-(void) masterStorageKeyWasUnlocked:(NSNotification *)note;     // Notification handler
+-(void) masterStorageKeyWasLocked:(NSNotification *)note;       // Notification handler
 
 @end
 
-extern NSString * const TSDatabaseDidUnlockNotification;
+
+@implementation TSEncryptedDatabase
 
 
-@implementation TSEncryptedDatabase {
-}
-
-
+#pragma mark Database lifecycle
 +(instancetype) databaseCreateAtFilePath:(NSString *)dbFilePath updateBoolPreference:(NSString *)preferenceName error:(NSError **)error {
 
     // Have we created a DB on this device already ?
@@ -76,6 +77,8 @@ extern NSString * const TSDatabaseDidUnlockNotification;
 }
 
 
+
+# pragma mark Private methods
 -(instancetype) initWithFilePath:(NSString *)dbFilePath {
     if(self=[super init]) {
         self->_dbFilePath = dbFilePath;

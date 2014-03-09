@@ -14,7 +14,7 @@
 
 @interface TSEncryptedDatabase : NSObject
 
-@property (nonatomic, retain, readonly) FMDatabaseQueue *dbQueue; // The database handle to use for accessing its content
+@property (nonatomic, retain, readonly) FMDatabaseQueue *dbQueue; // Handle to use for accessing the database's content. It will be nil if the database hasn't been opened yet or if the storage master key is in a "locked" state
 @property (nonatomic, retain, readonly) NSString *dbFilePath;
 
 

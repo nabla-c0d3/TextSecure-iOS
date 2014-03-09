@@ -33,9 +33,7 @@ static FMDatabaseQueue *waitingPushMessageDbQueue = nil;
 
 +(BOOL) databaseCreateWaitingPushMessageDatabaseWithError:(NSError **)error {
     // This DB is not required to be encrypted-the Push message content comes in pre-encrypted with the signaling key, and inside contents with the Axolotl ratchet
-    // For very limited obfuscation of meta-data (unread message count), and to reuse the encrypted DB architecture we encrypt the entire DB itself with a key stored in user preferences.
-    // The key cannot be stored somewhere accessible by password as this is designed to be deployed in the situation before the user enters her password.
-
+    
     // Have we created a DB on this device already ?
     if ([[NSUserDefaults standardUserDefaults] boolForKey:WAITING_PUSH_MESSAGE_DB_PREFERENCE]) {
         if (error) {
