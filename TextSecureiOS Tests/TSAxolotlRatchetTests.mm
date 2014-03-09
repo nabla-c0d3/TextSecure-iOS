@@ -253,12 +253,12 @@ static NSString *masterPw = @"1234test";
     NSData* version = [Cryptography generateRandomBytes:1];
     
     // note in this test alice's identity key = bob's as they are sharing the same keydb. their ephemeral keys will be different.
-    TSECKeyPair* aliceIdentityKey = [TSUserKeysDatabase identityKey];
+    TSECKeyPair* aliceIdentityKey = [TSUserKeysDatabase identityKeyWithError:nil];
     TSECKeyPair* aliceInitialEphemeralKey = [TSECKeyPair keyPairGenerateWithPreKeyId:0];
     
-    XCTAssertTrue([[TSUserKeysDatabase allPreKeys] count]>0, @"no prekeys in database");
-    TSECKeyPair* bobEphemeralKey =  [[TSUserKeysDatabase allPreKeys] objectAtIndex:0];
-    TSECKeyPair* bobIdentityKey = [TSUserKeysDatabase identityKey];
+    XCTAssertTrue([[TSUserKeysDatabase allPreKeysWithError:nil] count]>0, @"no prekeys in database");
+    TSECKeyPair* bobEphemeralKey =  [[TSUserKeysDatabase allPreKeysWithError:nil] objectAtIndex:0];
+    TSECKeyPair* bobIdentityKey = [TSUserKeysDatabase identityKeyWithError:nil];
     
     XCTAssertNotNil(bobEphemeralKey, @"bob ephemeral key nil");
     XCTAssertNotNil(bobIdentityKey, @"bob identity key nil");
