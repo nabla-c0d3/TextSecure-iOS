@@ -129,5 +129,29 @@ static NSString *dbPreference = @"WasTestDbCreated";
 }
 
 
+- (void)testStorageKeyLockNotification
+{
+    TSEncryptedDatabase *encDb = [TSEncryptedDatabase  databaseCreateAtFilePath:[FilePath pathInDocumentsDirectory:dbFileName] updateBoolPreference:dbPreference error:nil];
+    
+    // Write something to the DB
+    [encDb.dbQueue inDatabase: ^(FMDatabase *db) {
+        [db executeUpdate:@"CREATE TABLE user_identity_key (serialized_keypair BLOB)"];
+    }];
+    
+    // Lock the storage master key
+    [TSStorageMasterKey lockStorageMasterKey];
+    
+    // Validate that the DB was locked as well
+    XCTAssertNil(encDb.dbQueue, @"database was not locked after locking storage key");
+
+    // Unlock the storage master key
+    [TSStorageMasterKey unlockStorageMasterKeyUsingPassword:masterPw error:nil];
+    
+    // Validate that the DB was unlocked as well
+    XCTAssertNotNil(encDb.dbQueue, @"database was not unlocked after unlocking storage key");
+}
+
+
+
 
 @end
