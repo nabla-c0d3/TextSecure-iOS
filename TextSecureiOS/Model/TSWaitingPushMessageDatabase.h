@@ -11,10 +11,6 @@
 
 @interface TSWaitingPushMessageDatabase : NSObject
 
-#define WAITING_PUSH_MESSAGE_DB_FILE_NAME @"TSWaitingPushMessage.db"
-#define WAITING_PUSH_MESSAGE_DB_PREFERENCE @"TSWaitingPushMessageDbWasCreated"
-#define WAITING_PUSH_MESSAGE_DB_PASSWORD @"TSWaitingPushMessageDbPassword"
-
 +(BOOL) databaseCreateWaitingPushMessageDatabaseWithError:(NSError **)error;
 +(void) databaseErase;
 
