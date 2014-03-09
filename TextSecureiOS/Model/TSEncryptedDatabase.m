@@ -19,17 +19,15 @@
 
 @end
 
+extern NSString * const TSDatabaseDidUnlockNotification;
 
 
 @implementation TSEncryptedDatabase {
 }
 
 
-+(instancetype) databaseCreateAtFilePath:(NSString *)dbFilePath updateBoolPreference:(NSString *)preferenceName withPassword:(NSData*)dbMasterKey error:(NSError **)error {
-    // Sanity check 
-    if (!dbMasterKey) {
-        return nil;
-    }
++(instancetype) databaseCreateAtFilePath:(NSString *)dbFilePath updateBoolPreference:(NSString *)preferenceName error:(NSError **)error {
+
     // Have we created a DB on this device already ?
     if ([[NSUserDefaults standardUserDefaults] boolForKey:preferenceName]) {
         if (error) {
@@ -41,74 +39,81 @@
     // Cleanup remnants of a previous DB
     [TSEncryptedDatabase databaseEraseAtFilePath:dbFilePath updateBoolPreference:preferenceName];
     
-    
     // Create the DB
-    __block BOOL dbInitSuccess = NO;
-    FMDatabaseQueue *dbQueue = [FMDatabaseQueue databaseQueueWithPath:dbFilePath];
-    [dbQueue inDatabase:^(FMDatabase *db) {
-        if(![db setKeyWithData:dbMasterKey]) {
-            return;
-        }
-        
-        FMResultSet *rset = [db executeQuery:@"SELECT count(*) FROM sqlite_master"];
-        if (rset) {
-            [rset close];
-            dbInitSuccess = YES;
-            return;
-        }
-    }];
-    
-    if (!dbInitSuccess) {
-        if (error) {
-            *error = [TSStorageError errorDatabaseCreationFailed];
-        }
+    TSEncryptedDatabase *encryptedDb = [[TSEncryptedDatabase alloc] initWithFilePath:dbFilePath];
+    if (![encryptedDb openAndDecrypt:error]) {
         // Cleanup
         [TSEncryptedDatabase databaseEraseAtFilePath:dbFilePath updateBoolPreference:preferenceName];
         return nil;
     }
     
-    TSEncryptedDatabase *encryptedDB = [[TSEncryptedDatabase alloc] initWithDatabaseQueue:dbQueue];
     
     // Success - store in the preferences that the DB has been successfully created
     [[NSUserDefaults standardUserDefaults] setBool:TRUE forKey:preferenceName];
     [[NSUserDefaults standardUserDefaults] synchronize];
     
-    return encryptedDB;
+    return encryptedDb;
 }
 
 
-+(instancetype) databaseCreateAtFilePath:(NSString *)dbFilePath updateBoolPreference:(NSString *)preferenceName error:(NSError **)error {
-    // Retrieve storage master key
-    NSData *dbMasterKey = [TSStorageMasterKey getStorageMasterKeyWithError:error];
-    if (!dbMasterKey) {
++(instancetype) databaseOpenAndDecryptAtFilePath:(NSString *)dbFilePath error:(NSError **)error {
+    
+    TSEncryptedDatabase *encryptedDb = [[TSEncryptedDatabase alloc] initWithFilePath:dbFilePath];
+    if (![encryptedDb openAndDecrypt:error]) {
         return nil;
     }
-    return [TSEncryptedDatabase databaseCreateAtFilePath:dbFilePath updateBoolPreference:preferenceName withPassword:dbMasterKey error:error];
-    
- 
+
+    return encryptedDb;
 }
 
 
++(void) databaseEraseAtFilePath:(NSString *)dbFilePath updateBoolPreference:(NSString *)preferenceName {
+    // Update the preferences
+    [[NSUserDefaults standardUserDefaults] setBool:FALSE forKey:preferenceName];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    // Erase the DB file
+    [[NSFileManager defaultManager] removeItemAtPath:dbFilePath error:nil];
+}
 
 
+-(instancetype) initWithFilePath:(NSString *)dbFilePath {
+    if(self=[super init]) {
+        self->_dbFilePath = dbFilePath;
+        self->_dbQueue = nil;
+    }
+    
 
-+(instancetype) databaseOpenAndDecryptAtFilePath:(NSString *)dbFilePath error:(NSError **)error {    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(masterStorageKeyWasUnlocked:)
+                                                 name:TSStorageMasterKeyWasUnlockedNotification
+                                               object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(masterStorageKeyWasLocked:)
+                                                 name:TSStorageMasterKeyWasLockedNotification
+                                               object:nil];
+    
+    return self;
+}
+
+
+- (void) dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+
+-(BOOL) openAndDecrypt:(NSError **)error {
+    
     // Get the storage master key
     NSData *storageKey = [TSStorageMasterKey getStorageMasterKeyWithError:error];
     if (!storageKey) {
-        return nil;
+        return NO;
     }
-    return [TSEncryptedDatabase databaseOpenAndDecryptAtFilePath:dbFilePath withPassword:storageKey error:error];
-}
-
-
-+(instancetype) databaseOpenAndDecryptAtFilePath:(NSString *)dbFilePath withPassword:(NSData*)storageKey error:(NSError **)error {
-    if (!storageKey) {
-        return nil;
-    }
+    
     // Try to open the DB
     __block BOOL initSuccess = NO;
-    FMDatabaseQueue *dbQueue = [FMDatabaseQueue databaseQueueWithPath:dbFilePath];
+    FMDatabaseQueue *dbQueue = [FMDatabaseQueue databaseQueueWithPath:self.dbFilePath];
     
     [dbQueue inDatabase:^(FMDatabase *db) {
         if(![db setKeyWithData:storageKey]) {
@@ -128,28 +133,28 @@
         if (error) {
             *error = [TSStorageError errorStorageKeyCorrupted];
         }
-        return nil;
+        return NO;
     }
     
-    TSEncryptedDatabase *encryptedDB = [[TSEncryptedDatabase alloc] initWithDatabaseQueue:dbQueue];
-    return encryptedDB;
-}
-
-+(void) databaseEraseAtFilePath:(NSString *)dbFilePath updateBoolPreference:(NSString *)preferenceName {
-    // Update the preferences
-    [[NSUserDefaults standardUserDefaults] setBool:FALSE forKey:preferenceName];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    // Erase the DB file
-    [[NSFileManager defaultManager] removeItemAtPath:dbFilePath error:nil];
+    self->_dbQueue = dbQueue;
+    return YES;
 }
 
 
--(instancetype) initWithDatabaseQueue:(FMDatabaseQueue *)queue {
-    if(self=[super init]) {
-        self.dbQueue = queue;
+-(void) masterStorageKeyWasUnlocked:(NSNotification *)note {
+    // Use the storage key to decrypt the DB
+    // This should never fail
+    if (![self openAndDecrypt:nil]){
+        @throw [NSException exceptionWithName:@"database corrupted" reason:@"unable to unlock to the database" userInfo:nil];
     }
-    return self;
 }
+
+
+-(void) masterStorageKeyWasLocked:(NSNotification *)note {
+    // Discard the DB handle
+    self->_dbQueue = nil;
+}
+
 
 
 @end

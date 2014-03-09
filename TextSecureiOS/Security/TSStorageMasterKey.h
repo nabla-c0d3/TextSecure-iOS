@@ -10,6 +10,11 @@
 #define kStorageMasterKeyWasCreated @"StorageMasterKeyWasCreated"
 #define MASTER_KEY_SIZE 32
 
+
+extern NSString *const TSStorageMasterKeyWasUnlockedNotification;
+extern NSString *const TSStorageMasterKeyWasLockedNotification;
+
+
 @interface TSStorageMasterKey : NSObject
 
 
@@ -35,7 +40,7 @@
 
 #pragma mark Storage master key access
 /**
- * Unlock the storage master key.
+ * Unlock the storage master key. This will send a TSStorageMasterKeyWasUnlockedNotification to all TSEncryptedDatabase instances.
  * @author Alban Diquet
  *
  * @param userPassword The password from which the master key was derived on creation.
@@ -56,7 +61,7 @@
 
 #pragma mark Storage master key locking
 /**
- * Lock the storage master key, thereby requiring a call to unlockStorageMasterKeyUsingPassword:error before the key can be recovered.
+ * Lock the storage master key, thereby requiring a call to unlockStorageMasterKeyUsingPassword:error before the key can be recovered. This will send a TSStorageMasterKeyWasLockedNotification to all TSEncryptedDatabase instances.
  * @author Alban Diquet
  */
 +(void) lockStorageMasterKey;

@@ -14,7 +14,8 @@
 #import "NSData+Base64.h"
 #import "TSStorageError.h"
 
-
+NSString *const TSStorageMasterKeyWasUnlockedNotification = @"com.whispersystems.storagemasterkey.unlocked";
+NSString *const TSStorageMasterKeyWasLockedNotification = @"com.whispersystems.storagemasterkey.locked";
 
 
 static uint8_t storageMasterKey[MASTER_KEY_SIZE] = {0};
@@ -105,6 +106,8 @@ static BOOL isMasterKeyLocked = TRUE;
     
     isMasterKeyLocked = FALSE;
     memcpy(storageMasterKey, [masterKey bytes], MASTER_KEY_SIZE);
+    [[NSNotificationCenter defaultCenter] postNotificationName:TSStorageMasterKeyWasUnlockedNotification object:self];
+    
     return [NSData dataWithBytesNoCopy:storageMasterKey length:MASTER_KEY_SIZE freeWhenDone:NO];
 }
 
@@ -130,12 +133,12 @@ static BOOL isMasterKeyLocked = TRUE;
 
 
 +(void) lockStorageMasterKey {
-    // Best-effort "secure" erase; may be overkill and may not work at all
-    // We'll also probably have pointers to decrypted DBs hanging around :(
     isMasterKeyLocked = TRUE;
     
-    // TODO: See if this actually works the way I think it works
+    // Best-effort "secure" erase; may be overkill and may not work at all
     memset(storageMasterKey, 0, MASTER_KEY_SIZE);
+    
+    [[NSNotificationCenter defaultCenter] postNotificationName:TSStorageMasterKeyWasLockedNotification object:nil];
 }
 
 
@@ -145,6 +148,7 @@ static BOOL isMasterKeyLocked = TRUE;
 
 
 +(void) eraseStorageMasterKey {
+    [[NSNotificationCenter defaultCenter] postNotificationName:TSStorageMasterKeyWasLockedNotification object:nil];
     [[NSUserDefaults standardUserDefaults] setBool:FALSE forKey:kStorageMasterKeyWasCreated];
     [[NSUserDefaults standardUserDefaults] synchronize];
     isMasterKeyLocked = TRUE;

@@ -8,10 +8,6 @@
 
 #import <Foundation/Foundation.h>
 
-/**
- * Posted when the database is unlocked
- */
-extern NSString * const TSDatabaseDidUnlockNotification;
 
 @interface TSWaitingPushMessageDatabase : NSObject
 
