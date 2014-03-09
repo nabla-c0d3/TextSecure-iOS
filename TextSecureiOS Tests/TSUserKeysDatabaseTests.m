@@ -46,10 +46,10 @@ static NSString *storageKeyPw = @"1234test";
     XCTAssertNil(error, @"database creation returned an error");
     
     
-    XCTAssertNotNil([TSUserKeysDatabase allPreKeys], @"database creation returned nil prekeys");
-    XCTAssertNotNil([TSUserKeysDatabase identityKey], @"database creation returned nil identity key");
+    XCTAssertNotNil([TSUserKeysDatabase allPreKeysWithError:nil], @"database creation returned nil prekeys");
+    XCTAssertNotNil([TSUserKeysDatabase identityKeyWithError:nil], @"database creation returned nil identity key");
     // Check for key of last resort
-    XCTAssertNotNil([TSUserKeysDatabase preKeyWithId:0xFFFFFF], @"database creation returned nil for key of last resort");
+    XCTAssertNotNil([TSUserKeysDatabase preKeyWithId:0xFFFFFF error:nil], @"database creation returned nil for key of last resort");
 }
 
 
