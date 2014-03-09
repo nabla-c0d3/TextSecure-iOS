@@ -17,8 +17,8 @@
 +(void) databaseErase;
 
 // Calling the following functions will fail if the storage master key is in a "locked" state; see TSStorageMasterKey
-+(TSECKeyPair*) identityKey;
-+(NSArray*) allPreKeys;
-+(TSECKeyPair*) preKeyWithId:(int32_t)preKeyId;
++(TSECKeyPair*) identityKeyWithError:(NSError **)error;
++(NSArray*) allPreKeysWithError:(NSError **)error;
++(TSECKeyPair*) preKeyWithId:(int32_t)preKeyId error:(NSError **)error;
 
 @end

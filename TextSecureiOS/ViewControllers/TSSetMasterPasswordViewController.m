@@ -97,8 +97,8 @@
     // Send the user's newly generated keys to the API
     // TODO: Error handling & retry if network error
     
-    NSArray *preKeys = [TSUserKeysDatabase allPreKeys];
-    TSECKeyPair *identityKey = [TSUserKeysDatabase identityKey];
+    NSArray *preKeys = [TSUserKeysDatabase allPreKeysWithError:nil]; // TODO: Error handling
+    TSECKeyPair *identityKey = [TSUserKeysDatabase identityKeyWithError:nil]; // TODO: Error handling
     
     [[TSNetworkManager sharedManager] queueAuthenticatedRequest:[[TSRegisterPrekeysRequest alloc] initWithPrekeyArray:preKeys identityKey:identityKey] success:^(AFHTTPRequestOperation *operation, id responseObject) {
         switch (operation.response.statusCode) {

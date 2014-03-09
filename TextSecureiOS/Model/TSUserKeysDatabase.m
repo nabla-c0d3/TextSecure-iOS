@@ -19,16 +19,18 @@
 #define USER_KEYS_DB_FILE_NAME @"TSUserKeys.db"
 #define USER_KEYS_DB_PREFERENCE @"TSUserKeysDbWasCreated"
 
+
 static TSEncryptedDatabase *userKeysDb = nil;
+
 
 @interface TSUserKeysDatabase(Private)
 
 +(BOOL) databaseOpenWithError:(NSError **)error;
-
 +(BOOL) generateAndStorePreKeys;
 +(BOOL) generateAndStoreIdentityKey;
 
 @end
+
 
 @implementation TSUserKeysDatabase
 
@@ -121,7 +123,13 @@ static TSEncryptedDatabase *userKeysDb = nil;
 
 #pragma Keys access
 
-+(TSECKeyPair*) identityKey{
++(TSECKeyPair*) identityKeyWithError:(NSError **)error {
+    
+    // Decrypt the DB if it hasn't been done yet
+    if (![TSUserKeysDatabase databaseOpenWithError:error]){
+        return nil;
+    }
+    
     // Fetch the key from the DB
     __block NSData *serializedKeyPair = nil;
     [userKeysDb.dbQueue inDatabase: ^(FMDatabase *db) {
@@ -135,15 +143,11 @@ static TSEncryptedDatabase *userKeysDb = nil;
 }
 
 
-+(NSArray *)allPreKeys {
-    __block NSError *error;
++(NSArray *)allPreKeysWithError:(NSError **)error {
     
     // Decrypt the DB if it hasn't been done yet
-    if (!userKeysDb) {
-        if (![TSUserKeysDatabase databaseOpenWithError:&error]){
-            DLog(@"We had issues opening the user keys database");
-            return nil;
-        }
+    if (![TSUserKeysDatabase databaseOpenWithError:error]){
+        return nil;
     }
     
     // Fetch all keys from the DB
@@ -158,27 +162,23 @@ static TSEncryptedDatabase *userKeysDb = nil;
             [preKeys addObject:[NSKeyedUnarchiver unarchiveObjectWithData:serializedKeyPair]];
         }
         [rs close];
-        
-        if (preKeysNb != PREKEYS_NUMBER+1) {
-            if (error) {
-                error = [TSStorageError errorDatabaseCorrupted];
-            }
-        }
     }];
-    
-    if (!error) {
-        return preKeys;
-    } else{
-        DLog(@"We had issues with the prekeys");
+    if (preKeysNb != PREKEYS_NUMBER+1) {
+        if (error) {
+            *error = [TSStorageError errorDatabaseCorrupted];
+        }
         return nil;
     }
+    
+    return preKeys;
 }
 
-+(TSECKeyPair*) preKeyWithId:(int32_t)preKeyId{
+
++(TSECKeyPair*) preKeyWithId:(int32_t)preKeyId error:(NSError **)error {
+    
     // Decrypt the DB if it hasn't been done yet
-    if (!userKeysDb) {
-        if (![TSUserKeysDatabase databaseOpenWithError:nil])
-            return nil;
+    if (![TSUserKeysDatabase databaseOpenWithError:error]){
+        return nil;
     }
     
     // Fetch the key from the DB
@@ -191,6 +191,9 @@ static TSEncryptedDatabase *userKeysDb = nil;
         [rs close];
     }];
     if (!serializedKeyPair) {
+        if (error) {
+            *error = [TSStorageError errorDatabaseCorrupted];
+        }
         return nil;
     }
     

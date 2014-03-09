@@ -91,7 +91,8 @@
                                                           previousCounter:[NSNumber numberWithInt:0]
                                                           counter:[NSNumber numberWithInt:0]
                                                           encryptedMessage:ciphertext];
-    TSECKeyPair *identityKey = [TSUserKeysDatabase identityKey];
+    // TODO: Error handling
+    TSECKeyPair *identityKey = [TSUserKeysDatabase identityKeyWithError:nil];
     
     TSPreKeyWhisperMessage *prekeyMessage = [[TSPreKeyWhisperMessage alloc]
                                              initWithPreKeyId:theirPrekeyId

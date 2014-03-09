@@ -193,7 +193,7 @@
 #pragma mark private methods
 -(TSECKeyPair*) ratchetSetupFirstSender:(NSData*)theirIdentity theirEphemeralKey:(NSData*)theirEphemeral{
     
-    TSECKeyPair *ourIdentityKey = [TSUserKeysDatabase identityKey];
+    TSECKeyPair *ourIdentityKey = [TSUserKeysDatabase identityKeyWithError:nil]; // TODO: error handling
     TSECKeyPair *ourEphemeralKey = [TSECKeyPair keyPairGenerateWithPreKeyId:0];
     NSData* ourMasterKey = [self masterKeyAlice:ourIdentityKey ourEphemeral:ourEphemeralKey   theirIdentityPublicKey:theirIdentity theirEphemeralPublicKey:theirEphemeral];
     RKCK* receivingChain = [self initialRootKey:ourMasterKey];
@@ -216,8 +216,9 @@
 
 -(void) ratchetSetupFirstReceiver:(NSData*)theirIdentityKey theirEphemeralKey:(NSData*)theirEphemeralKey withMyPrekeyId:(NSNumber*)preKeyId{
     /* after this we will have the CK of the Receiving Chain */
-    TSECKeyPair *ourEphemeralKey = [TSUserKeysDatabase preKeyWithId:[preKeyId unsignedLongValue]];
-    TSECKeyPair *ourIdentityKey =  [TSUserKeysDatabase identityKey];
+    
+    TSECKeyPair *ourEphemeralKey = [TSUserKeysDatabase preKeyWithId:[preKeyId unsignedLongValue] error:nil];// TODO: error handling
+    TSECKeyPair *ourIdentityKey =  [TSUserKeysDatabase identityKeyWithError:nil];
     NSData* ourMasterKey = [self masterKeyBob:ourIdentityKey ourEphemeral:ourEphemeralKey theirIdentityPublicKey:theirIdentityKey theirEphemeralPublicKey:theirEphemeralKey];
     RKCK* sendingChain = [self initialRootKey:ourMasterKey];
     [sendingChain saveSendingChainOnThread:self.thread withMyNewEphemeral:ourEphemeralKey];
